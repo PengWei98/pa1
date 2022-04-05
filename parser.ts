@@ -1,5 +1,6 @@
 import {parser} from "lezer-python";
 import {TreeCursor} from "lezer-tree";
+import { createClassifier } from "typescript";
 import {Expr, Op, Stmt} from "./ast";
 
 export function traversArgs(c : TreeCursor, s : string) : Array<Expr> {
@@ -62,8 +63,18 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr {
           arg1: args[1]
         };
       }
-      c.parent(); // pop arglist
-      c.parent(); // pop CallExpression
+      else {
+        throw new Error('Invalid args');
+      }
+      // c.parent(); // pop arglist
+      // c.parent(); // pop CallExpression
+    case "UnaryExpression":
+      c.firstChild();
+      var uop = s.substring(c.from, c.to);
+      c.nextSibling();
+      const num = Number(uop + s.substring(c.from, c.to));
+      c.parent();
+      return {tag: "num", value: num};
     case "BinaryExpression":
       c.firstChild();
       const left = traverseExpr(c, s);
