@@ -1,16 +1,34 @@
 import {run} from './runner';
 
+function print(arg : any) {
+  const elt = document.createElement("pre");
+  document.getElementById("output").appendChild(elt);
+  elt.innerText = arg;
+  return arg;
+}
+
 
 function webStart() {
   document.addEventListener("DOMContentLoaded", function() {
     var importObject = {
       imports: {
-        print: (arg : any) => {
-          console.log("Logging from WASM: ", arg);
+        print_num: (arg : any) => {
           const elt = document.createElement("pre");
           document.getElementById("output").appendChild(elt);
           elt.innerText = arg;
           return arg;
+        },
+        print_bool: (arg : any) => {
+          const elt = document.createElement("pre");
+          document.getElementById("output").appendChild(elt);
+          elt.innerText = arg === 1 ? "True" : "False";
+          return arg === 1 ? "True" : "False";
+        },
+        print_none: (arg : any) => {
+          const elt = document.createElement("pre");
+          document.getElementById("output").appendChild(elt);
+          elt.innerText = "None";
+          return "None";
         },
         abs: Math.abs,
         min: Math.min,

@@ -26,7 +26,7 @@ export async function run(source : string, config: any) : Promise<number> {
   const parsed = parse(source);
   var returnType = "";
   var returnExpr = "";
-  const lastExpr = parsed[parsed.length - 1]
+  const lastExpr = parsed.stmts[parsed.stmts.length - 1]
   if(lastExpr.tag === "expr") {
     returnType = "(result i32)";
     returnExpr = "(local.get $$last)"
@@ -34,16 +34,22 @@ export async function run(source : string, config: any) : Promise<number> {
   const compiled = compiler.compile(source);
   const importObject = config.importObject;
   const wasmSource = `(module
-    (func $print (import "imports" "print") (param i32) (result i32))
+    (func $print_num (import "imports" "print_num") (param i32) (result i32))
+    (func $print_bool (import "imports" "print_bool") (param i32) (result i32))
+    (func $print_none (import "imports" "print_none") (param i32) (result i32))
     (func $abs (import "imports" "abs") (param i32) (result i32))
     (func $max (import "imports" "max") (param i32 i32) (result i32))
     (func $min (import "imports" "min") (param i32 i32) (result i32))
     (func $pow (import "imports" "pow") (param i32 i32) (result i32))
+
+    ${compiled.wasmFuncs}
+
     (func (export "exported_func") ${returnType}
       ${compiled.wasmSource}
       ${returnExpr}
     )
   )`;
+  console.log(wasmSource);
   const myModule = wabtInterface.parseWat("test.wat", wasmSource);
   var asBinary = myModule.toBinary({});
   var wasmModule = await WebAssembly.instantiate(asBinary.buffer, importObject);
@@ -51,7 +57,4 @@ export async function run(source : string, config: any) : Promise<number> {
   return result;
 }
 
-// (func $abs (import "imports" "abs") (param i32) (result i32))
-// (func $max (import "imports" "max") (param i32 i32) (result i32))
-// (func $min (import "imports" "min") (param i32 i32) (result i32))
-// (func $pow (import "imports" "pow") (param i32 i32) (result i32))
+// (func $print (import "imports" "print") (param i32) (result i32))
