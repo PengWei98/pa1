@@ -47,7 +47,6 @@ export function typeCheckFuncDef(func: FuncDef<null>, env: TypeEnv): FuncDef<Typ
         return {...param, a: param.type};
     })
     // add all the variables which is initialized in the function to the localEnvs
-    // todo: is this OK?
     const typedVars =  typeCheckVarDefs(func.vardefs, localEnv);
 
     // add the function to the localEnv
@@ -91,7 +90,7 @@ export function typeCheckStmts(stmts: Stmt<null>[], env: TypeEnv): Stmt<Type>[] 
             case "if":
                 const typedIfCond = typeCheckExpr(stmt.cond, env);
                 if (typedIfCond.a !== Type.bool){
-                    throw new Error("TYPE ERROR");
+                    throw new Error("TYPE ERROR: the condition should be bool");
                 }
                 const typedIfStmts = typeCheckStmts(stmt.ifStmts, env);
                 const typedElseStmts = typeCheckStmts(stmt.elseStmts, env);
@@ -100,7 +99,7 @@ export function typeCheckStmts(stmts: Stmt<null>[], env: TypeEnv): Stmt<Type>[] 
             case "while":
                 const typedWhileCond = typeCheckExpr(stmt.cond, env);
                 if (typedWhileCond.a !== Type.bool){
-                    throw new Error("TYPE ERROR");
+                    throw new Error("TYPE ERROR: the condition should be bool");
                 }
                 const typedWhileStmts = typeCheckStmts(stmt.stmts, env);
                 typedStmts.push({...stmt, cond: typedWhileCond, stmts: typedWhileStmts, a: Type.none});
@@ -150,7 +149,7 @@ export function typeCheckExpr(expr: Expr<null>, env: TypeEnv): Expr<Type>{
                 case BinOp.Div:
                 case BinOp.Mod:
                     if (left.a !== Type.int || right.a !== Type.int) {
-                        throw new Error("TYPE ERROR");
+                        throw new Error("TYPE ERROR: the type of the two operators are different");
                     }
                     return { ... expr, left: left, right: right, a: Type.int};
                 case BinOp.GTE:
@@ -184,15 +183,19 @@ export function typeCheckExpr(expr: Expr<null>, env: TypeEnv): Expr<Type>{
                     }
                     return { ... expr, arg, a: Type.int};
             }
-        // case "builtin2":
-        //     break;
         case "call":
-            const typedArgs = expr.args.map((arg) => typeCheckExpr(arg, env));
-            console.log(env);
-            console.log(expr.name)
             if (!env.funcs.has(expr.name)){
-                throw new Error("REFERENCE ERROR");
+                throw new Error("REFERENCE ERROR: the function is not defined");
             }
+            if (expr.args.length !== env.funcs.get(expr.name)[0].length){
+                throw new Error("TYPE ERROR: the number of the param is wrong");
+            }
+            const typedArgs = expr.args.map((arg) => typeCheckExpr(arg, env));
+            typedArgs.forEach((typedArg, i) => {
+                if (typedArg.a !== env.funcs.get(expr.name)[0][i]){
+                    throw new Error("TYPE ERROR: the type of the param is wrong");
+                }
+            })
             return {...expr, args: typedArgs, a: env.funcs.get(expr.name)[1]}
         default: 
             return expr;

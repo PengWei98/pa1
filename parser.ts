@@ -270,12 +270,13 @@ export function traverseStmt(c : TreeCursor, s : string, program : Program<null>
       c.nextSibling();
       const funcName = s.substring(c.from, c.to);
       c.nextSibling();
-      const params = s.substring(c.from, c.to).slice(1, -1).split(",")
+      const p = s.substring(c.from, c.to).slice(1, -1);
+      const params = p.length > 0 ? p.split(",")
         .map(item => ({
           name: item.trim().split(":")[0].trim(),
           type: item.trim().split(":")[1].trim() == "int" ? Type.int : (item.trim().split(":")[1].trim() == "bool" ? Type.bool : Type.none)
         }
-        ));
+        )) : [];
       c.nextSibling();
       var ret = Type.none;
       var retStr = s.substring(c.from, c.to).replace("->", "").trim();

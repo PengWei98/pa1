@@ -159,7 +159,6 @@ function codeGenExpr(expr : Expr<Type>) : Array<string> {
           } else{
             return ["(i32.const 0)"];
           }
-          break;
         default:
           throw new Error("Invalid Op");
       }
