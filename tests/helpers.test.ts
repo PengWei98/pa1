@@ -35,7 +35,8 @@ export async function run(source: string): Promise<number> {
     (func $pow (import "imports" "pow") (param i32 i32) (result i32))
 
     ${compiled.wasmFuncs}
-
+    ${compiled.wasmGlobals}
+    
     (global $heap (mut i32) (i32.const 4))
 
     (func (export "exported_func") ${returnType}

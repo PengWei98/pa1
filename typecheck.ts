@@ -119,16 +119,13 @@ export function typeCheckStmts(stmts: Stmt<null>[], env: TypeEnv): Stmt<Type>[] 
                 console.log('????')
                 console.log(typedMember)
                 console.log(typedMemberValue)
-                if (typedMember.a !== typedMemberValue.a && typedMember.a !== "none"){
+                if ((typedMember.a as any).class !== (typedMemberValue.a as any).class && typedMember.a !== "none"){
                     throw new Error("TYPE ERROR");
                 }
                 typedStmts.push({...stmt, member: typedMember, value: typedMemberValue, a: "none" as Type})
                 break;
             case "return":
                 const typedRet = typeCheckExpr(stmt.ret, env);
-                console.log('return')
-                console.log(env.retType)
-                console.log(typedRet.a)
                 if (env.retType !== typedRet.a && (env.retType as any).class !== (typedRet.a as any).class && typedRet.a !== "none"){
                     throw new Error("TYPE ERROR");
                 }

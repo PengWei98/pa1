@@ -44,6 +44,7 @@ export async function run(source : string, config: any) : Promise<number> {
     (func $pow (import "imports" "pow") (param i32 i32) (result i32))
 
     ${compiled.wasmFuncs}
+    ${compiled.wasmGlobals}
 
     (global $heap (mut i32) (i32.const 4))
 
@@ -52,6 +53,37 @@ export async function run(source : string, config: any) : Promise<number> {
       ${returnExpr}
     )
   )`;
+
+//   const wasmSource = `
+//   (module
+//     (memory $js.mem (;0;) (import "js" "mem") 1)
+//     (func $print_num (import "imports" "print_num") (param i32) (result i32))
+//     (func $print_bool (import "imports" "print_bool") (param i32) (result i32))
+//     (func $print_none (import "imports" "print_none") (param i32) (result i32))
+//     (func $abs (import "imports" "abs") (param i32) (result i32))
+//     (func $max (import "imports" "max") (param i32 i32) (result i32))
+//     (func $min (import "imports" "min") (param i32 i32) (result i32))
+//     (func $pow (import "imports" "pow") (param i32 i32) (result i32))
+
+//     (func $f  (result i32) (local $$last i32)
+
+// (global.get $x)
+// (i32.const 1)
+// (i32.add))
+
+//     (global $heap (mut i32) (i32.const 4))
+//     (global $x (mut i32) (i32.const 10))
+
+//     (func (export "exported_func") (result i32)
+//       (local $$last i32)
+
+// call
+// $f
+// (call $print_num)
+// (local.set $$last)
+//       (local.get $$last)
+//     )
+//   )`
 
   console.log(wasmSource);
   const myModule = wabtInterface.parseWat("test.wat", wasmSource);
