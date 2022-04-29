@@ -11,6 +11,7 @@ export function typeCheck(source: string) : Type {
   return returnV.a;
 }
 
+
 // Modify run to use `importObject` (imported above) to use for printing
 // You can modify `importObject` to have any new fields you need here, or
 // within another function in your compiler, for example if you need other
@@ -26,6 +27,49 @@ export async function run(source: string): Promise<number> {
     returnType = "(result i32)";
     returnExpr = "(local.get $$last)"
   }
+
+  // const newImportObject = {
+  //   ...importObject,
+  //   check_null_pointer: (arg: any) => {
+  //     if (arg === 0){
+  //       throw new Error("RUNTIME ERROR: null pointer");
+  //     }
+  //     return arg;
+  //   }
+  // }
+  importObject.imports = {
+    ...importObject.imports,
+    check_null_pointer: (arg: any) => {
+      if (arg === 0){
+        throw new Error("RUNTIME ERROR: null pointer");
+      }
+      return arg;
+    }
+  }
+
+
+//  const importObject = {
+//     imports: {
+//       // we typically define print to mean logging to the console. To make testing
+//       // the compiler easier, we define print so it logs to a string object.
+//       //  We can then examine output to see what would have been printed in the
+//       //  console.
+//       print: (arg: any) => print(Type.Num, arg),
+//       print_num: (arg: number) => print(Type.Num, arg),
+//       print_bool: (arg: number) => print(Type.Bool, arg),
+//       print_none: (arg: number) => print(Type.None, arg),
+//       abs: Math.abs,
+//       min: Math.min,
+//       max: Math.max,
+//       pow: Math.pow,
+//       check_null_pointer: (arg: any) => {
+//         if (arg === 0){
+//           throw new Error("RUNTIME ERROR: null pointer");
+//         }
+//         return arg;
+//       }
+//     },
+
   const compiled = compiler.compile(source);
   const wasmSource = `(module
     (memory $js.mem (;0;) (import "js" "mem") 1)

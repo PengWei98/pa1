@@ -54,6 +54,7 @@ export function typeCheckVarDefs(defs: VarDef<null>[], env: TypeEnv):VarDef<Type
     defs.forEach((def) => {
         const typedDef = typeCheckLiteral(def.literal);
         // check assginable
+        // if (!assginable(, typedDef))
         if (typedDef.a !== def.typedvar.type && typedDef.a !== "none") {
             throw new Error("TYPE ERROR");
         }
