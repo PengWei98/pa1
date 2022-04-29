@@ -38,13 +38,14 @@ export async function run(source: string): Promise<number> {
   //   }
   // }
 
+  // (func $check_null_pointer (import "imports" "check_null_pointer") (param i32) (result i32))
+
   const compiled = compiler.compile(source);
   const wasmSource = `(module
     (memory $js.mem (;0;) (import "js" "mem") 1)
     (func $print_num (import "imports" "print_num") (param i32) (result i32))
     (func $print_bool (import "imports" "print_bool") (param i32) (result i32))
     (func $print_none (import "imports" "print_none") (param i32) (result i32))
-    (func $check_null_pointer (import "imports" "check_null_pointer") (param i32) (result i32))
     (func $abs (import "imports" "abs") (param i32) (result i32))
     (func $max (import "imports" "max") (param i32 i32) (result i32))
     (func $min (import "imports" "min") (param i32 i32) (result i32))
