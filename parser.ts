@@ -3,7 +3,7 @@ import {TreeCursor} from "lezer-tree";
 import { Func } from "mocha";
 import { createClassifier } from "typescript";
 // import {Expr, Op, Stmt} from "./ast";
-import { Program, Type, Expr, Literal, VarDef, FuncDef, Stmt, BinOp, UniOp, ClassDef, MethodDef } from "./ast";
+import { Program, Type, Expr, Literal, VarDef, FuncDef, Stmt, BinOp, UniOp, ClassDef } from "./ast";
 import { typeCheckFuncDef } from "./typecheck";
 
 export function traversArgs(c : TreeCursor, s : string) : Expr<null>[] {
@@ -20,6 +20,8 @@ export function traversArgs(c : TreeCursor, s : string) : Expr<null>[] {
 }
 
 export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
+  console.log("c.type.name")
+  console.log(c.type.name)
   switch(c.type.name) {
     case "Number":
       return {
@@ -37,6 +39,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
         literal: {tag: "none"}
       }
     case "VariableName":
+    case "self":
       return {
         tag: "id",
         name: s.substring(c.from, c.to)
@@ -107,31 +110,49 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
       return { tag: "binOp", left, op, right};
     case "CallExpression":
       c.firstChild();
-      const funcName = s.substring(c.from, c.to);
-      c.nextSibling();
-      const argList = new Array<Expr<null>>();
-      if (s.substring(c.from, c.to).length > 2) {
-        c.firstChild();
-        while (c.nextSibling()) {
-          argList.push(traverseExpr(c, s));
-          c.nextSibling();
+      const func = traverseExpr(c, s);
+      if (func.tag === "classVar") {
+        c.nextSibling();
+        const argList = new Array<Expr<null>>();
+        if (s.substring(c.from, c.to).length > 2) {
+          c.firstChild();
+          while (c.nextSibling()) {
+            argList.push(traverseExpr(c, s));
+            c.nextSibling();
+          }
+          c.parent();
         }
         c.parent();
+        return { tag: "classMethod", objName: func.objName, methodName: func.varName, args: argList };
       }
-      c.parent();
-      if (funcName === "print" || funcName == "abs"){
-        return {
-          tag: "builtin1",
-          name: funcName,
-          arg: argList[0]
-        };
-      }else{
-        return {
-          tag: "call",
-          name: funcName,
-          args: argList
+      else {
+        const funcName = s.substring(c.from, c.to);
+        c.nextSibling();
+        const argList = new Array<Expr<null>>();
+        if (s.substring(c.from, c.to).length > 2) {
+          c.firstChild();
+          while (c.nextSibling()) {
+            argList.push(traverseExpr(c, s));
+            c.nextSibling();
+          }
+          c.parent();
+        }
+        c.parent();
+        if (funcName === "print" || funcName == "abs"){
+          return {
+            tag: "builtin1",
+            name: funcName,
+            arg: argList[0]
+          };
+        }else{
+          return {
+            tag: "call",
+            name: funcName,
+            args: argList
+          }
         }
       }
+
     case "MemberExpression":
       c.firstChild();
       // const objName = s.substring(c.from, c.to);
@@ -141,6 +162,13 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
       const memberName = s.substring(c.from, c.to);
       c.parent();
       return { tag: "classVar", objName, varName: memberName };
+    case "ParenthesizedExpression":
+      c.firstChild();
+      c.nextSibling();
+      const e = traverseExpr(c, s);
+      c.nextSibling();
+      c.parent();
+      return e;
     default:
       throw new Error("Could not parse expr at " + c.from + " " + c.to + ": " + s.substring(c.from, c.to));
   }
@@ -157,7 +185,6 @@ export function traverseStmt(c : TreeCursor, s : string, program : Program<null>
       if (variable.tag === "id"){
         name = variable.name;
       }
-      // const name = s.substring(c.from, c.to);
       c.nextSibling(); // go to equals
       const node = c.node;
 
@@ -302,23 +329,33 @@ export function traverseStmt(c : TreeCursor, s : string, program : Program<null>
       c.firstChild();
       c.nextSibling();
       const funcName = s.substring(c.from, c.to);
+      console.log('funcname')
+      console.log(funcName)
       c.nextSibling();
       const p = s.substring(c.from, c.to).slice(1, -1);
       const params = p.length > 0 ? p.split(",")
         .map(item => ({
           name: item.trim().split(":")[0].trim(),
-          type: (item.trim().split(":")[1].trim() == "int" ? "int" : (item.trim().split(":")[1].trim() == "bool" ? "bool" : "none") as Type)
+          type: (item.trim().split(":")[1].trim() == "int" ? "int" : (item.trim().split(":")[1].trim() == "bool" ? "bool" : {"tag": "object", "class": item.trim().split(":")[1].trim()}) as Type)
         }
         )) : [];
+      console.log(params)
       c.nextSibling();
-      var ret = "none";
+      console.log('fvgbhegfbhtnyjhrtebgr')
+      console.log(s.substring(c.from, c.to))
+      var ret;
       var retStr = s.substring(c.from, c.to).replace("->", "").trim();
       if (retStr === "int"){
         ret = "int";
-      }
-      if (retStr == "bool"){
+      }else if (retStr === "bool"){
         ret = "bool";
+      }else if (retStr.includes("\n")){
+        ret = "none";
+      }else{
+        ret = {"tag": "object", "class": retStr};
       }
+      console.log('parseret')
+      console.log(ret)
       c.nextSibling();
       c.firstChild();
       const func: FuncDef<null> = { name: funcName, params, ret: ret as Type, vardefs: [], stmts: [] }
@@ -337,6 +374,8 @@ export function traverseStmt(c : TreeCursor, s : string, program : Program<null>
       }
       c.parent();
       c.parent();
+      console.log('FUNCCC')
+      console.log(func)
       return func;
     case "ClassDefinition":
       c.firstChild();
@@ -353,7 +392,7 @@ export function traverseStmt(c : TreeCursor, s : string, program : Program<null>
           cls.vardefs.push(st);
         }
         // todo; ????
-        if (isMethodDef(st)){
+        if (isFuncDef(st)){
           cls.methoddefs.push(st);
         }
       }
@@ -372,7 +411,7 @@ export function traverseStmt(c : TreeCursor, s : string, program : Program<null>
 const isStmt = (st: any): st is Stmt<null> => !(st.hasOwnProperty("typedvar") || st.hasOwnProperty("params"));
 const isVarDef = (st: any): st is VarDef<null> => st.hasOwnProperty("typedvar");
 const isFuncDef = (st: any): st is FuncDef<null> => st.hasOwnProperty("params");
-const isMethodDef = (st: any): st is MethodDef<null> => st.hasOwnProperty("params");
+// const isMethodDef = (st: any): st is MethodDef<null> => st.hasOwnProperty("params");
 const isProgram = (st: any): st is Program<null> => st.hasOwnProperty("funcdefs");
 
 export function traverse(c : TreeCursor, s : string) : Program<null> {

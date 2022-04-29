@@ -23,8 +23,7 @@ export function typeCheckProgram(program: Program<null>): Program<Type> {
         typedClss.push(typedCls);
     })
     const typedStmts = typeCheckStmts(program.stmts, env);
-    console.log({ ...program, a: "none" as Type, vardefs: typedVars, funcdefs: typedFuncs, stmts: typedStmts});
-    return { ...program, a: "none" as Type, vardefs: typedVars, funcdefs: typedFuncs, stmts: typedStmts}
+    return { ...program, a: "none" as Type, vardefs: typedVars, funcdefs: typedFuncs, stmts: typedStmts, classdefs: typedClss}
 }
 
 export function typeCheckVarDefs(defs: VarDef<null>[], env: TypeEnv):VarDef<Type>[] {
@@ -35,8 +34,6 @@ export function typeCheckVarDefs(defs: VarDef<null>[], env: TypeEnv):VarDef<Type
         if (typedDef.a !== def.typedvar.type && typedDef.a !== "none") {
             throw new Error("TYPE ERROR");
         }
-        console.log('def.typedvar.type')
-        console.log(def.typedvar.type);
         env.vars.set(def.typedvar.name, def.typedvar.type);
         const typedvar = {...def.typedvar, a: def.typedvar.type};
         typedDefs.push({...def, typedvar: typedvar, a: def.typedvar.type});
@@ -72,17 +69,31 @@ export function typeCheckClassDef(cls: ClassDef<null>, env: TypeEnv): ClassDef<T
     env.classes.set(cls.name, cls);
     // add all the global enviroment to the local environment
     const localEnv = {vars: new Map(env.vars), funcs: new Map(env.funcs), retType: env.retType, classes: env.classes};
-    // add all the parameters to the localEnvs
 
     // add all the variables which is initialized in the function to the localEnvs
+    cls.vardefs.forEach(vardef => {
+        localEnv.vars.set(vardef.typedvar.name, vardef.typedvar.type);
+    })
+    // localEnv.retType = {"tag": "object", "class": cls.name};
     const typedVars =  typeCheckVarDefs(cls.vardefs, localEnv);
 
+
+    cls.methoddefs.forEach(methoddef => {
+        methoddef.name = cls.name + "$" + methoddef.name;
+        localEnv.funcs.set(cls.name + "$" + methoddef.name, [methoddef.params.map(params => params.type), methoddef.ret]);
+    })
+
+    const typedMethods: FuncDef<Type>[] = [];
+    cls.methoddefs.forEach(methoddef => {
+        const typedDef = typeCheckFuncDef(methoddef, env);
+        typedMethods.push(typedDef);
+    });
 
     // localEnv.retType = func.ret;
     // todo: check all the paths have the right return value
     // const typedStmts = typeCheckStmts(func.stmts, localEnv);
     // todo: the a?
-    return {...cls, vardefs: typedVars, a: {tag: "object", class: cls.name}};
+    return {...cls, vardefs: typedVars, methoddefs: typedMethods, a: {tag: "object", class: cls.name}};
 }
 
 export function typeCheckStmts(stmts: Stmt<null>[], env: TypeEnv): Stmt<Type>[] {
@@ -105,6 +116,9 @@ export function typeCheckStmts(stmts: Stmt<null>[], env: TypeEnv): Stmt<Type>[] 
                     throw new Error("TYPE ERROR");
                 }
                 const typedMemberValue = typeCheckExpr(stmt.value, env);
+                console.log('????')
+                console.log(typedMember)
+                console.log(typedMemberValue)
                 if (typedMember.a !== typedMemberValue.a && typedMember.a !== "none"){
                     throw new Error("TYPE ERROR");
                 }
@@ -112,7 +126,10 @@ export function typeCheckStmts(stmts: Stmt<null>[], env: TypeEnv): Stmt<Type>[] 
                 break;
             case "return":
                 const typedRet = typeCheckExpr(stmt.ret, env);
-                if (env.retType !== typedRet.a){
+                console.log('return')
+                console.log(env.retType)
+                console.log(typedRet.a)
+                if (env.retType !== typedRet.a && (env.retType as any).class !== (typedRet.a as any).class && typedRet.a !== "none"){
                     throw new Error("TYPE ERROR");
                 }
                 typedStmts.push({...stmt, ret: typedRet});
@@ -241,16 +258,28 @@ export function typeCheckExpr(expr: Expr<null>, env: TypeEnv): Expr<Type>{
                 throw new Error("REFERENCE ERROR: the function or class name is not defined");
             }
         case "classVar":
-            const typedObj = typeCheckExpr(expr.objName, env);
+            var typedObj = typeCheckExpr(expr.objName, env);
             if (!typedObj.a?.valueOf()?.hasOwnProperty("tag")){
                 throw new Error("TYPE ERROR: the variable is not an object");
             }
-            const className: string = (typedObj.a?.valueOf() as any).class;
-            const vars = env.classes.get(className).vardefs.filter((vardef) => vardef.typedvar.name === expr.varName);
+            var className: string = (typedObj.a?.valueOf() as any).class;
+            var vars = env.classes.get(className).vardefs.filter((vardef) => vardef.typedvar.name === expr.varName);
             if (vars.length === 0){
                 throw new Error("REFERENCE ERROR: no such a field");
             }
             return {...expr, a: vars[0].typedvar.type, objName: typedObj}
+        case "classMethod":
+            // { a ?: A, tag: "classMethod", objName: Expr<A>, methodName: string, args: Expr<A>[]}
+            var typedObj = typeCheckExpr(expr.objName, env);
+            if (!typedObj.a?.valueOf()?.hasOwnProperty("tag")){
+                throw new Error("TYPE ERROR: the variable is not an object");
+            }
+            var className: string = (typedObj.a?.valueOf() as any).class;
+            var methods = env.classes.get(className).methoddefs.filter((methoddef) => methoddef.name === className + "$" + expr.methodName);
+            if (methods.length === 0){
+                throw new Error("REFERENCE ERROR: no such a method in the class");
+            }
+            return {...expr, objName: typedObj, methodName: methods[0].name, a: methods[0].ret}
         default: 
             return expr;
     }

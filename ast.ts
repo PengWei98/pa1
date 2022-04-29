@@ -15,6 +15,7 @@ export type Expr<A> =
   | { a ?: A, tag: "builtin1", name: string, arg: Expr<A> }
   | { a ?: A, tag: "binOp", left: Expr<A>, op: BinOp, right: Expr<A>}
   | { a ?: A, tag: "UniOp", op: UniOp, arg: Expr<A>}
+  | { a ?: A, tag: "Parenthesis", e: Expr<A>}
   | { a ?: A, tag: "builtin2", name: string, arg0: Expr<A>, arg1: Expr<A>}
   | { a ?: A, tag: "call", name: string, args: Expr<A>[], isFunc?: boolean } // a function or a contructor
   | { a ?: A, tag: "classVar", objName: Expr<A>, varName: string}
@@ -49,6 +50,6 @@ export type Literal<A> =
 
 export type FuncDef<A> = { a ?: A, name: string, params: TypedVar<A>[], ret: Type, vardefs: VarDef<A>[], stmts: Stmt<A>[] }
 
-export type MethodDef<A> = { a ?: A, name: string, params: TypedVar<A>[], ret: Type, vardefs: VarDef<A>[], stmts: Stmt<A>[] }
+// export type MethodDef<A> = { a ?: A, name: string, params: TypedVar<A>[], ret: Type, vardefs: VarDef<A>[], stmts: Stmt<A>[] }
 
-export type ClassDef<A> = { a ?: A, name: string, vardefs: VarDef<A>[], methoddefs: MethodDef<A>[] }
+export type ClassDef<A> = { a ?: A, name: string, vardefs: VarDef<A>[], methoddefs: FuncDef<A>[] }
