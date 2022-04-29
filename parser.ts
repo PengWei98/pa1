@@ -132,6 +132,15 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
           args: argList
         }
       }
+    case "MemberExpression":
+      c.firstChild();
+      // const objName = s.substring(c.from, c.to);
+      const objName = traverseExpr(c, s);
+      c.nextSibling();
+      c.nextSibling();
+      const memberName = s.substring(c.from, c.to);
+      c.parent();
+      return { tag: "classVar", objName, varName: memberName };
     default:
       throw new Error("Could not parse expr at " + c.from + " " + c.to + ": " + s.substring(c.from, c.to));
   }
@@ -143,7 +152,12 @@ export function traverseStmt(c : TreeCursor, s : string, program : Program<null>
   switch(c.node.type.name) {
     case "AssignStatement":
       c.firstChild(); // go to name
-      const name = s.substring(c.from, c.to);
+      const variable = traverseExpr(c, s);
+      var name: string;
+      if (variable.tag === "id"){
+        name = variable.name;
+      }
+      // const name = s.substring(c.from, c.to);
       c.nextSibling(); // go to equals
       const node = c.node;
 
@@ -157,7 +171,20 @@ export function traverseStmt(c : TreeCursor, s : string, program : Program<null>
           name: name,
           value: value
         };
-        return st;
+        if (variable.tag === "id"){
+          return {
+            tag: "assign",
+            name: name,
+            value: value
+          };
+        }
+        else {
+          return {
+            tag: "memberAssign",
+            member: variable,
+            value: value
+          };
+        }
       }
       else {
         // initialize new variable
@@ -335,6 +362,7 @@ export function traverseStmt(c : TreeCursor, s : string, program : Program<null>
       }
       c.parent();
       c.parent();
+      console.log(cls)
       return cls;
     default:
       throw new Error("Could not parse stmt at " + c.node.from + " " + c.node.to + ": " + s.substring(c.from, c.to) + c.node.type.name);

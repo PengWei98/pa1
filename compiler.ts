@@ -23,14 +23,20 @@ export function compile(source: string) : CompileResult {
   const localDefines = [scratchVar];
   definedVars.forEach(v => {
     localDefines.push(`(local $${v} i32)`);
-  })
+  });
 
   const funcDefines: string[] = [];
   ast.funcdefs.forEach((func) => {
     const params = func.params.map((param) =>{
       return `(param $${param.name} i32)`
     });
-    const signature = `(func $${func.name} ${params.join(" ")} (result i32) (local $$last i32)\n`;
+    var signature = `(func $${func.name} ${params.join(" ")} (result i32) (local $$last i32)\n`;
+    const funcVars: string[] = [];
+    func.vardefs.forEach(v => {
+      funcVars.push(`(local $${v.typedvar.name} i32)`);
+    });
+    signature = signature + funcVars.join("\n")
+
     const funcStmts = func.stmts.map((stmt) => {
       console.log(stmt);
       console.log( codeGen(stmt, ast.classdefs))
@@ -58,6 +64,24 @@ function codeGen(stmt: Stmt<Type>, classdefs: ClassDef<Type>[]) : Array<string> 
     case "assign":
       var valStmts = codeGenExpr(stmt.value, classdefs);
       return valStmts.concat([`(local.set $${stmt.name})`]);
+    case "memberAssign":
+      const objStmts = codeGenExpr((stmt.member as any).objName, classdefs);
+      var valStmts = codeGenExpr(stmt.value, classdefs);
+
+      const className: string = ((stmt.member as any).objName.a?.valueOf() as any).class;
+      const classData = classdefs.filter((classdef) => classdef.name === className)[0];
+      var index = 0;
+      for(; index < classData.methoddefs.length; index++){
+        if (classData.methoddefs[index].name === (stmt.member as any).varName){
+          break;
+        }
+      }
+      return [
+        ...objStmts, 
+        `(i32.add (i32.const ${index * 4}))`,
+        ...valStmts,
+        `i32.store`
+      ];
     case "expr":
       var exprStmts = codeGenExpr(stmt.expr, classdefs);
       return exprStmts.concat([`(local.set $$last)`]);
@@ -218,6 +242,22 @@ function codeGenExpr(expr : Expr<Type>, classdefs: ClassDef<Type>[] ) : Array<st
         ]
 
       }
+    case "classVar":
+      const objStmts = codeGenExpr(expr.objName, classdefs);
+      const className: string = (expr.objName.a?.valueOf() as any).class;
+      const classData = classdefs.filter((classdef) => classdef.name === className)[0];
+      var index = 0;
+      for(; index < classData.methoddefs.length; index++){
+        if (classData.methoddefs[index].name === expr.varName){
+          break;
+        }
+      }
+      return [
+        ...objStmts, 
+        `(i32.add (i32.const ${index * 4}))`,
+        `i32.load`
+      ]
+
   }
 }
 

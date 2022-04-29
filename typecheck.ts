@@ -4,12 +4,12 @@ import { Program, Type, Expr, Literal, VarDef, FuncDef, Stmt, BinOp, UniOp, Clas
 type TypeEnv = {
     vars: Map<string, Type>,
     funcs: Map<string, [Type[], Type]>,
-    classes: Set<string>,
+    classes: Map<string, ClassDef<Type>>,
     retType: Type
 }
 
 export function typeCheckProgram(program: Program<null>): Program<Type> {
-    const env = {vars: new Map<string, Type>(), funcs: new Map<string, [Type[], Type]>(), classes: new Set<string>(), retType: "none" as Type}
+    const env = {vars: new Map<string, Type>(), funcs: new Map<string, [Type[], Type]>(), classes: new Map<string, ClassDef<Type>>(), retType: "none" as Type}
 
     const typedVars = typeCheckVarDefs(program.vardefs, env);
     const typedFuncs: FuncDef<Type>[] = [];
@@ -35,10 +35,10 @@ export function typeCheckVarDefs(defs: VarDef<null>[], env: TypeEnv):VarDef<Type
         if (typedDef.a !== def.typedvar.type && typedDef.a !== "none") {
             throw new Error("TYPE ERROR");
         }
+        console.log('def.typedvar.type')
+        console.log(def.typedvar.type);
         env.vars.set(def.typedvar.name, def.typedvar.type);
         const typedvar = {...def.typedvar, a: def.typedvar.type};
-        console.log('vfbgre')
-        console.log(typedvar)
         typedDefs.push({...def, typedvar: typedvar, a: def.typedvar.type});
     });
     return typedDefs;
@@ -68,7 +68,8 @@ export function typeCheckFuncDef(func: FuncDef<null>, env: TypeEnv): FuncDef<Typ
 }
 
 export function typeCheckClassDef(cls: ClassDef<null>, env: TypeEnv): ClassDef<Type>{
-    env.classes.add(cls.name);
+    // env.classes.add(cls.name);
+    env.classes.set(cls.name, cls);
     // add all the global enviroment to the local environment
     const localEnv = {vars: new Map(env.vars), funcs: new Map(env.funcs), retType: env.retType, classes: env.classes};
     // add all the parameters to the localEnvs
@@ -90,19 +91,24 @@ export function typeCheckStmts(stmts: Stmt<null>[], env: TypeEnv): Stmt<Type>[] 
         switch(stmt.tag) {
             case "assign":
                 if (!env.vars.has(stmt.name)){
-                    throw new Error("REFERENCE ERROR")
+                    throw new Error("REFERENCE ERROR");
                 }
                 const typedValue = typeCheckExpr(stmt.value, env);
-                // console.log("!!!!!")
-                // console.log(stmt)
-                // console.log(typedValue)
-                // console.log(env.vars.get(stmt.name))
-                // console.log(stmt.name);
-                // console.log(env)
                 // if (typedValue.a !== env.vars.get(stmt.name) ){
                 //     throw new Error("TYPE ERROR")
                 // }
                 typedStmts.push({...stmt, value: typedValue, a: "none" as Type});
+                break;
+            case "memberAssign":
+                const typedMember = typeCheckExpr(stmt.member, env);
+                if (typedMember.tag !== "classVar"){
+                    throw new Error("TYPE ERROR");
+                }
+                const typedMemberValue = typeCheckExpr(stmt.value, env);
+                if (typedMember.a !== typedMemberValue.a && typedMember.a !== "none"){
+                    throw new Error("TYPE ERROR");
+                }
+                typedStmts.push({...stmt, member: typedMember, value: typedMemberValue, a: "none" as Type})
                 break;
             case "return":
                 const typedRet = typeCheckExpr(stmt.ret, env);
@@ -234,16 +240,17 @@ export function typeCheckExpr(expr: Expr<null>, env: TypeEnv): Expr<Type>{
             else {
                 throw new Error("REFERENCE ERROR: the function or class name is not defined");
             }
-            // if (expr.args.length !== env.funcs.get(expr.name)[0].length){
-            //     throw new Error("TYPE ERROR: the number of the param is wrong");
-            // }
-            // const typedArgs = expr.args.map((arg) => typeCheckExpr(arg, env));
-            // typedArgs.forEach((typedArg, i) => {
-            //     if (typedArg.a !== env.funcs.get(expr.name)[0][i]){
-            //         throw new Error("TYPE ERROR: the type of the param is wrong");
-            //     }
-            // })
-            // return {...expr, args: typedArgs, a: env.funcs.get(expr.name)[1], isFunc}
+        case "classVar":
+            const typedObj = typeCheckExpr(expr.objName, env);
+            if (!typedObj.a?.valueOf()?.hasOwnProperty("tag")){
+                throw new Error("TYPE ERROR: the variable is not an object");
+            }
+            const className: string = (typedObj.a?.valueOf() as any).class;
+            const vars = env.classes.get(className).vardefs.filter((vardef) => vardef.typedvar.name === expr.varName);
+            if (vars.length === 0){
+                throw new Error("REFERENCE ERROR: no such a field");
+            }
+            return {...expr, a: vars[0].typedvar.type, objName: typedObj}
         default: 
             return expr;
     }
