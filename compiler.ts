@@ -166,8 +166,6 @@ function codeGen(stmt: Stmt<Type>, classdefs: ClassDef<Type>[], globaldefs: VarD
       var condExpr = codeGenExpr(stmt.cond, classdefs, globaldefs);
       var out = condExpr.concat([`(if`]).concat([`(then`]).concat(codeGenStmts(stmt.ifStmts, classdefs, globaldefs)).concat([`)`]);
       out = out.concat([`(else`]).concat(codeGenStmts(stmt.elseStmts, classdefs, globaldefs)).concat([`)`]).concat([`)`])
-      console.log("pout")
-      console.log(out)
       console.log(codeGenStmts(stmt.elseStmts, classdefs, globaldefs))
       return out;
 
@@ -340,6 +338,7 @@ function codeGenExpr(expr : Expr<Type>, classdefs: ClassDef<Type>[], globaldefs:
       }
       return [
         ...objStmts, 
+        `(call $check_null_pointer)`,
         `(i32.add (i32.const ${index * 4}))`,
         `i32.load`
       ]
@@ -347,10 +346,15 @@ function codeGenExpr(expr : Expr<Type>, classdefs: ClassDef<Type>[], globaldefs:
       var args: any[] = [];
       [expr.objName, ...expr.args].forEach((arg) => {
         args = [
+          // args[0],
+          // ...args.slice(1, args.length),
           ...args,
           ...codeGenExpr(arg, classdefs, globaldefs)
         ];
       })
+      args.splice(1, 0, `(call $check_null_pointer)`);
+
+
       // var className: string = (expr.objName.a?.valueOf() as any).class;
       // const mName = expr.methodName.includes("$") ? expr.methodName : className + "$" + expr.methodName;
       const mName = expr.methodName;

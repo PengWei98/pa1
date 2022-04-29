@@ -50,6 +50,4 @@ export type Literal<A> =
 
 export type FuncDef<A> = { a ?: A, name: string, params: TypedVar<A>[], ret: Type, vardefs: VarDef<A>[], stmts: Stmt<A>[] }
 
-// export type MethodDef<A> = { a ?: A, name: string, params: TypedVar<A>[], ret: Type, vardefs: VarDef<A>[], stmts: Stmt<A>[] }
-
 export type ClassDef<A> = { a ?: A, name: string, vardefs: VarDef<A>[], methoddefs: FuncDef<A>[] }

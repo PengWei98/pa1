@@ -32,6 +32,12 @@ export const importObject = {
     min: Math.min,
     max: Math.max,
     pow: Math.pow,
+    check_null_pointer: (arg: any) => {
+      if (arg === 0){
+        throw new Error("RUNTIME ERROR: null pointer");
+      }
+      return arg;
+    }
   },
 
   output: "",

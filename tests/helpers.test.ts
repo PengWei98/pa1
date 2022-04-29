@@ -2,10 +2,13 @@ import { importObject } from "./import-object.test";
 import wabt from 'wabt';
 import * as compiler from './../compiler';
 import {parse} from './../parser';
+import {typeCheckProgram} from './../typecheck'
 
 // Modify typeCheck to return a `Type` as we have specified below
 export function typeCheck(source: string) : Type {
-  return "none";
+  const ast = typeCheckProgram(parse(source));
+  const returnV = ast.stmts[ast.stmts.length - 1];
+  return returnV.a;
 }
 
 // Modify run to use `importObject` (imported above) to use for printing
@@ -29,6 +32,7 @@ export async function run(source: string): Promise<number> {
     (func $print_num (import "imports" "print_num") (param i32) (result i32))
     (func $print_bool (import "imports" "print_bool") (param i32) (result i32))
     (func $print_none (import "imports" "print_none") (param i32) (result i32))
+    (func $check_null_pointer (import "imports" "check_null_pointer") (param i32) (result i32))
     (func $abs (import "imports" "abs") (param i32) (result i32))
     (func $max (import "imports" "max") (param i32 i32) (result i32))
     (func $min (import "imports" "min") (param i32 i32) (result i32))

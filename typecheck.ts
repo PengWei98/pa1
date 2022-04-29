@@ -1,11 +1,34 @@
 import { Func } from "mocha";
 import { Program, Type, Expr, Literal, VarDef, FuncDef, Stmt, BinOp, UniOp, ClassDef } from "./ast";
+// import { expect } from "chai";
 
 type TypeEnv = {
     vars: Map<string, Type>,
     funcs: Map<string, [Type[], Type]>,
     classes: Map<string, ClassDef<Type>>,
     retType: Type
+}
+
+export function assginable(assignedType: Type, assigningType: Type): boolean {
+    // if (expect(assignedType).to.deep.eq(assigningType)){
+    //     return true;
+    // }
+    console.log('asginable')
+    console.log(assignedType)
+    console.log(assigningType)
+    if (assignedType === assigningType){
+        console.log('1')
+        return true;
+    }
+    if ((assignedType as any).tag === "object" && (assigningType as any).tag === "object" && (assignedType as any).class === (assigningType as any).class){
+        console.log('2')
+        return true;
+    }
+    if (!["int" as Type, "bool" as Type, "none" as Type].includes(assignedType) && assigningType === "none"){
+        console.log('3')
+        return true;
+    }
+    return false;
 }
 
 export function typeCheckProgram(program: Program<null>): Program<Type> {
@@ -89,10 +112,6 @@ export function typeCheckClassDef(cls: ClassDef<null>, env: TypeEnv): ClassDef<T
         typedMethods.push(typedDef);
     });
 
-    // localEnv.retType = func.ret;
-    // todo: check all the paths have the right return value
-    // const typedStmts = typeCheckStmts(func.stmts, localEnv);
-    // todo: the a?
     return {...cls, vardefs: typedVars, methoddefs: typedMethods, a: {tag: "object", class: cls.name}};
 }
 
@@ -104,10 +123,15 @@ export function typeCheckStmts(stmts: Stmt<null>[], env: TypeEnv): Stmt<Type>[] 
                 if (!env.vars.has(stmt.name)){
                     throw new Error("REFERENCE ERROR");
                 }
+                console.log('typecheck')
+                console.log(stmt.value)
                 const typedValue = typeCheckExpr(stmt.value, env);
+                console.log(typedValue)
+                console.log(env.vars.get(stmt.name))
+                if (!assginable(env.vars.get(stmt.name), typedValue.a)) {
                 // if (typedValue.a !== env.vars.get(stmt.name) ){
-                //     throw new Error("TYPE ERROR")
-                // }
+                    throw new Error("TYPE ERROR:")
+                }
                 typedStmts.push({...stmt, value: typedValue, a: "none" as Type});
                 break;
             case "memberAssign":
