@@ -3,7 +3,7 @@ import {TreeCursor} from "lezer-tree";
 import { Func } from "mocha";
 import { createClassifier } from "typescript";
 // import {Expr, Op, Stmt} from "./ast";
-import { Program, Type, Expr, Literal, VarDef, FuncDef, Stmt, BinOp, UniOp } from "./ast";
+import { Program, Type, Expr, Literal, VarDef, FuncDef, Stmt, BinOp, UniOp, ClassDef, MethodDef } from "./ast";
 import { typeCheckFuncDef } from "./typecheck";
 
 export function traversArgs(c : TreeCursor, s : string) : Expr<null>[] {
@@ -139,7 +139,7 @@ export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
 
 
 
-export function traverseStmt(c : TreeCursor, s : string, program : Program<null> | FuncDef<null>) : Stmt<null> | VarDef<null> | FuncDef<null> {
+export function traverseStmt(c : TreeCursor, s : string, program : Program<null> | FuncDef<null> | ClassDef<null>) : Stmt<null> | VarDef<null> | FuncDef<null> | ClassDef<null>{
   switch(c.node.type.name) {
     case "AssignStatement":
       c.firstChild(); // go to name
@@ -165,12 +165,16 @@ export function traverseStmt(c : TreeCursor, s : string, program : Program<null>
         c.nextSibling();
         var type;
         if (s.substring(c.from, c.to) === "int"){
-          type = Type.int;
+          type = "int";
         }
         else if (s.substring(c.from, c.to) === "bool"){
-          type = Type.bool;
+          type = "bool";
+        } 
+        else {
+          // define a class
+          const className: string = s.substring(c.from, c.to);
+          type = {tag: "object", class: className}
         }
-        else{ type = Type.none;}
         c.parent();
         c.nextSibling();
         c.nextSibling();
@@ -182,15 +186,17 @@ export function traverseStmt(c : TreeCursor, s : string, program : Program<null>
         else if (c.type.name === "Boolean"){
           literal = {tag: "bool", value: s.substring(c.from, c.to) == "True" ? true : false};
         }
-        else {
+        else if (c.type.name === "None") {
           literal = {tag: "none"}
         }
         c.parent();
         const varDef = {
-          typedvar: {name, type},
+          typedvar: {name, type: type as Type},
           literal
         }
         program.vardefs.push(varDef);
+
+        // todo: is the object null is OK?
         const st: Stmt<null> = {
           tag: "assign",
           name: name,
@@ -274,25 +280,29 @@ export function traverseStmt(c : TreeCursor, s : string, program : Program<null>
       const params = p.length > 0 ? p.split(",")
         .map(item => ({
           name: item.trim().split(":")[0].trim(),
-          type: item.trim().split(":")[1].trim() == "int" ? Type.int : (item.trim().split(":")[1].trim() == "bool" ? Type.bool : Type.none)
+          type: (item.trim().split(":")[1].trim() == "int" ? "int" : (item.trim().split(":")[1].trim() == "bool" ? "bool" : "none") as Type)
         }
         )) : [];
       c.nextSibling();
-      var ret = Type.none;
+      var ret = "none";
       var retStr = s.substring(c.from, c.to).replace("->", "").trim();
       if (retStr === "int"){
-        ret = Type.int;
+        ret = "int";
       }
       if (retStr == "bool"){
-        ret = Type.bool;
+        ret = "bool";
       }
       c.nextSibling();
       c.firstChild();
-      const func: FuncDef<null> = { name: funcName, params, ret, vardefs: [], stmts: [] }
+      const func: FuncDef<null> = { name: funcName, params, ret: ret as Type, vardefs: [], stmts: [] }
       while(c.nextSibling()){
         const st = traverseStmt(c, s, func);
         if (isStmt(st)){
           func.stmts.push(st);
+        }
+        // todo: ????
+        if (isVarDef(st)){
+          func.vardefs.push(st);
         }
       }
       if (isProgram(program)){
@@ -301,21 +311,47 @@ export function traverseStmt(c : TreeCursor, s : string, program : Program<null>
       c.parent();
       c.parent();
       return func;
+    case "ClassDefinition":
+      c.firstChild();
+      c.nextSibling();
+      const className = s.substring(c.from, c.to);
+      c.nextSibling();
+      c.nextSibling();
+      c.firstChild();
+      const cls: ClassDef<null> = { name: className, vardefs: [], methoddefs: []}
+      while(c.nextSibling()){
+        const st = traverseStmt(c, s, cls);
+        // todo: ????
+        if (isVarDef(st)){
+          cls.vardefs.push(st);
+        }
+        // todo; ????
+        if (isMethodDef(st)){
+          cls.methoddefs.push(st);
+        }
+      }
+      if (isProgram(program)){
+        program.classdefs.push(cls);
+      }
+      c.parent();
+      c.parent();
+      return cls;
     default:
-      throw new Error("Could not parse stmt at " + c.node.from + " " + c.node.to + ": " + s.substring(c.from, c.to));
+      throw new Error("Could not parse stmt at " + c.node.from + " " + c.node.to + ": " + s.substring(c.from, c.to) + c.node.type.name);
   }
 }
 
 const isStmt = (st: any): st is Stmt<null> => !(st.hasOwnProperty("typedvar") || st.hasOwnProperty("params"));
 const isVarDef = (st: any): st is VarDef<null> => st.hasOwnProperty("typedvar");
-const isFuncDef = (st: any): st is VarDef<null> => st.hasOwnProperty("params");
+const isFuncDef = (st: any): st is FuncDef<null> => st.hasOwnProperty("params");
+const isMethodDef = (st: any): st is MethodDef<null> => st.hasOwnProperty("params");
 const isProgram = (st: any): st is Program<null> => st.hasOwnProperty("funcdefs");
 
 export function traverse(c : TreeCursor, s : string) : Program<null> {
   
   switch(c.node.type.name) {
     case "Script":
-      const program: Program<null> = {vardefs: [], funcdefs: [], stmts: []}
+      const program: Program<null> = {vardefs: [], funcdefs: [], stmts: [], classdefs: []}
       c.firstChild();
       do {
         const st = traverseStmt(c, s, program);

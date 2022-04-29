@@ -59,11 +59,20 @@ case "builtin1":
 2.
 
 - At least one global variable
+
+  I'm sorry that the global variable is not currently supported.
+
 - At least one function with a parameter
 
 ![image-20220413230206486](/Users/pengwei/Library/Application Support/typora-user-images/image-20220413230206486.png)
 
+The parameters are stored in the `FuncDef.params`. And `FuncDef` is defined here(https://github.com/PengWei98/pa1/blob/main/ast.ts#L40)
+
+![image-20220413234939743](/Users/pengwei/Library/Application Support/typora-user-images/image-20220413234939743.png)
+
 - At least one variable defined inside a function
+
+  I'm sorry that the variable defined inside a function is not currently supported.
 
 3.
 
@@ -84,15 +93,16 @@ The integer was printed in the consoler continuously and finally the web browser
 ![image-20220413231206544](/Users/pengwei/Library/Application Support/typora-user-images/image-20220413231206544.png)
 
 - 3.
-- ![image-20220413231332909](/Users/pengwei/Library/Application Support/typora-user-images/image-20220413231332909.png)
 
-- 4.
+  ![image-20220413231332909](/Users/pengwei/Library/Application Support/typora-user-images/image-20220413231332909.png)
+
+- 4. This function is not supported.
 - 5.
 
 ![image-20220413231625454](/Users/pengwei/Library/Application Support/typora-user-images/image-20220413231625454.png)
 
-- 6.
-- 7.
+- 6.Recursive function is not supported.
+- 7.Recursive function is not supported.
 
 5. I choose the example in 2.2(Give an example of a program that uses at least one function with a parameter)
 
@@ -107,3 +117,7 @@ In the typechecker, I check the type of the function:
 When the function is called, I will choose the type for each arguments. And I also checked the whether the function has already defined.
 
 ![image-20220413234406028](/Users/pengwei/Library/Application Support/typora-user-images/image-20220413234406028.png)
+
+
+
+Explanation: Some of the functions are too hard for me. Acctually, for some features like resursive function or global variable,  the code can be compliled into WASM but there are some runtime error when running WASM. And the resource on the internet about WASM are so rare so it's really hard for me to find the solutions. I will try my best to solve it.
