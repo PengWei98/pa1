@@ -28,8 +28,8 @@ export async function run(source: string): Promise<number> {
     returnExpr = "(local.get $$last)"
   }
 
-  // const newImportObject = {
-  //   ...importObject,
+  // importObject.imports = {
+  //   ...importObject.imports,
   //   check_null_pointer: (arg: any) => {
   //     if (arg === 0){
   //       throw new Error("RUNTIME ERROR: null pointer");
@@ -37,38 +37,6 @@ export async function run(source: string): Promise<number> {
   //     return arg;
   //   }
   // }
-  importObject.imports = {
-    ...importObject.imports,
-    check_null_pointer: (arg: any) => {
-      if (arg === 0){
-        throw new Error("RUNTIME ERROR: null pointer");
-      }
-      return arg;
-    }
-  }
-
-
-//  const importObject = {
-//     imports: {
-//       // we typically define print to mean logging to the console. To make testing
-//       // the compiler easier, we define print so it logs to a string object.
-//       //  We can then examine output to see what would have been printed in the
-//       //  console.
-//       print: (arg: any) => print(Type.Num, arg),
-//       print_num: (arg: number) => print(Type.Num, arg),
-//       print_bool: (arg: number) => print(Type.Bool, arg),
-//       print_none: (arg: number) => print(Type.None, arg),
-//       abs: Math.abs,
-//       min: Math.min,
-//       max: Math.max,
-//       pow: Math.pow,
-//       check_null_pointer: (arg: any) => {
-//         if (arg === 0){
-//           throw new Error("RUNTIME ERROR: null pointer");
-//         }
-//         return arg;
-//       }
-//     },
 
   const compiled = compiler.compile(source);
   const wasmSource = `(module
