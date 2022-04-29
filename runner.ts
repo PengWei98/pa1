@@ -65,21 +65,28 @@ export async function run(source : string, config: any) : Promise<number> {
 //     (func $min (import "imports" "min") (param i32 i32) (result i32))
 //     (func $pow (import "imports" "pow") (param i32 i32) (result i32))
 
-//     (func $f  (result i32) (local $$last i32)
+//     (func $r (param $x i32) (result i32) (local $$last i32)
 
-// (global.get $x)
+// (local.get $x)
 // (i32.const 1)
-// (i32.add))
+// (i32.lt_s)
+// (if
+// (then
+// (i32.const 1)
+// )
+// (else
+// (i32.const 2)
+// )
+// ))
+    
 
 //     (global $heap (mut i32) (i32.const 4))
-//     (global $x (mut i32) (i32.const 10))
 
 //     (func (export "exported_func") (result i32)
 //       (local $$last i32)
-
+// (i32.const 3)
 // call
-// $f
-// (call $print_num)
+// $r
 // (local.set $$last)
 //       (local.get $$last)
 //     )
@@ -88,7 +95,7 @@ export async function run(source : string, config: any) : Promise<number> {
   console.log(wasmSource);
   const myModule = wabtInterface.parseWat("test.wat", wasmSource);
   var asBinary = myModule.toBinary({});
-  var memory = new WebAssembly.Memory({initial:10, maximum:100});
+  var memory = new WebAssembly.Memory({initial:10, maximum:10000});
   var wasmModule = await WebAssembly.instantiate(asBinary.buffer, { ...importObject, js: {mem: memory}});
   const result = (wasmModule.instance.exports.exported_func as any)();
   return result;

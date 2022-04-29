@@ -20,8 +20,6 @@ export function traversArgs(c : TreeCursor, s : string) : Expr<null>[] {
 }
 
 export function traverseExpr(c : TreeCursor, s : string) : Expr<null> {
-  console.log("c.type.name")
-  console.log(c.type.name)
   switch(c.type.name) {
     case "Number":
       return {
@@ -329,8 +327,6 @@ export function traverseStmt(c : TreeCursor, s : string, program : Program<null>
       c.firstChild();
       c.nextSibling();
       const funcName = s.substring(c.from, c.to);
-      console.log('funcname')
-      console.log(funcName)
       c.nextSibling();
       const p = s.substring(c.from, c.to).slice(1, -1);
       const params = p.length > 0 ? p.split(",")
@@ -339,10 +335,7 @@ export function traverseStmt(c : TreeCursor, s : string, program : Program<null>
           type: (item.trim().split(":")[1].trim() == "int" ? "int" : (item.trim().split(":")[1].trim() == "bool" ? "bool" : {"tag": "object", "class": item.trim().split(":")[1].trim()}) as Type)
         }
         )) : [];
-      console.log(params)
       c.nextSibling();
-      console.log('fvgbhegfbhtnyjhrtebgr')
-      console.log(s.substring(c.from, c.to))
       var ret;
       var retStr = s.substring(c.from, c.to).replace("->", "").trim();
       if (retStr === "int"){
@@ -354,8 +347,6 @@ export function traverseStmt(c : TreeCursor, s : string, program : Program<null>
       }else{
         ret = {"tag": "object", "class": retStr};
       }
-      console.log('parseret')
-      console.log(ret)
       c.nextSibling();
       c.firstChild();
       const func: FuncDef<null> = { name: funcName, params, ret: ret as Type, vardefs: [], stmts: [] }
@@ -374,8 +365,6 @@ export function traverseStmt(c : TreeCursor, s : string, program : Program<null>
       }
       c.parent();
       c.parent();
-      console.log('FUNCCC')
-      console.log(func)
       return func;
     case "ClassDefinition":
       c.firstChild();
@@ -401,7 +390,6 @@ export function traverseStmt(c : TreeCursor, s : string, program : Program<null>
       }
       c.parent();
       c.parent();
-      console.log(cls)
       return cls;
     default:
       throw new Error("Could not parse stmt at " + c.node.from + " " + c.node.to + ": " + s.substring(c.from, c.to) + c.node.type.name);
@@ -427,6 +415,7 @@ export function traverse(c : TreeCursor, s : string) : Program<null> {
         }
       } while(c.nextSibling())
       // console.log("traversed " + program.stmts.length + " statements ", program.stmts, "stopped at " , c.node);so
+      console.log('parse')
       console.log(program)
       return program;
     default:

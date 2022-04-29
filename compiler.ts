@@ -16,6 +16,8 @@ type CompileResult = {
 
 export function compile(source: string) : CompileResult {
   const ast = typeCheckProgram(parse(source));
+  console.log('ast')
+  console.log(ast)
   const definedVars = new Set();
   const globalDefines: string[] = [];
   ast.vardefs.forEach(s => {
@@ -56,17 +58,22 @@ export function compile(source: string) : CompileResult {
     signature = signature + funcVars.join("\n")
 
     const funcStmts = func.stmts.map((stmt) => {
-      // console.log(stmt);
+      console.log("stmt");
+      console.log(codeGen(stmt, ast.classdefs, ast.vardefs).join("\n"))
       // console.log( codeGen(stmt, ast.classdefs))
       return codeGen(stmt, ast.classdefs, ast.vardefs).join("\n")});
-      var funcAllStmts;
-      if (func.ret === "none"){
-        funcAllStmts = signature + "\n" + funcStmts.join("\n") + "(i32.const 0)\n)";
-      }
-      else{
-        funcAllStmts = signature + "\n" + funcStmts.join("\n") + ")";
-      }
-    // console.log(funcAllStmts)
+
+      console.log('funcStmtsfuncStmtsfuncStmtsfuncStmtsfuncStmts')
+      console.log(funcStmts)
+    var funcAllStmts;
+    // if (func.ret === "none"){
+      funcAllStmts = signature + "\n" + funcStmts.join("\n") + "(i32.const 0)\n)";
+    // }
+    // else{
+    //   funcAllStmts = signature + "\n" + funcStmts.join("\n") + ")";
+    // }
+    console.log("funcAllStmts")
+    console.log(funcAllStmts)
     funcDefines.push(funcAllStmts);
   });
 
@@ -86,25 +93,25 @@ export function compile(source: string) : CompileResult {
       const funcStmts = methoddef.stmts.map((stmt) => {
         return codeGen(stmt, ast.classdefs, ast.vardefs).join("\n")});
       var funcAllStmts;
-      if (methoddef.ret === "none"){
+      // if (methoddef.ret === "none"){
         funcAllStmts = signature + "\n" + funcStmts.join("\n") + "(i32.const 0)\n)";
-      }
-      else{
-        funcAllStmts = signature + "\n" + funcStmts.join("\n") + ")";
-      }
+      // }
+      // else{
+      //   funcAllStmts = signature + "\n" + funcStmts.join("\n") + ")";
+      // }
 
       funcDefines.push(funcAllStmts);
     })
   })
 
   var wasmFuncs = funcDefines.join("\n\n");
-
+  console.log('wasm')
+  console.log(wasmFuncs)
   
   const commandGroups = ast.stmts.map((stmt) => codeGen(stmt, ast.classdefs, ast.vardefs));
-  // const commands = localDefines.concat(funcDefines).concat([].concat.apply([], commandGroups));
+  console.log('comm')
+  console.log(commandGroups)
   const commands = localDefines.concat([].concat.apply([], commandGroups));
-  console.log(commands)
-  console.log("Generated: ", commands.join("\n"));
   return {
     wasmSource: commands.join("\n"),
     wasmFuncs,
@@ -113,6 +120,7 @@ export function compile(source: string) : CompileResult {
 }
 
 function codeGen(stmt: Stmt<Type>, classdefs: ClassDef<Type>[], globaldefs: VarDef<Type>[]) : Array<string> {
+  console.log(stmt.tag)
   switch(stmt.tag) {
     case "assign":
       var valStmts = codeGenExpr(stmt.value, classdefs, globaldefs);
@@ -144,7 +152,11 @@ function codeGen(stmt: Stmt<Type>, classdefs: ClassDef<Type>[], globaldefs: VarD
       return exprStmts.concat([`(local.set $$last)`]);
       // return exprStmts.concat("(drop)");
     case "return":
+
       var valStmts = codeGenExpr(stmt.ret, classdefs, globaldefs);
+      valStmts.push("return");
+      console.log('ret')
+      console.log(valStmts)
       return valStmts;
     case "assign":
       var valStmts = codeGenExpr(stmt.value, classdefs, globaldefs);
@@ -154,7 +166,11 @@ function codeGen(stmt: Stmt<Type>, classdefs: ClassDef<Type>[], globaldefs: VarD
       var condExpr = codeGenExpr(stmt.cond, classdefs, globaldefs);
       var out = condExpr.concat([`(if`]).concat([`(then`]).concat(codeGenStmts(stmt.ifStmts, classdefs, globaldefs)).concat([`)`]);
       out = out.concat([`(else`]).concat(codeGenStmts(stmt.elseStmts, classdefs, globaldefs)).concat([`)`]).concat([`)`])
+      console.log("pout")
+      console.log(out)
+      console.log(codeGenStmts(stmt.elseStmts, classdefs, globaldefs))
       return out;
+
     case "while":
       var whileCond = codeGenExpr(stmt.cond, classdefs, globaldefs);
 
@@ -270,8 +286,15 @@ function codeGenExpr(expr : Expr<Type>, classdefs: ClassDef<Type>[], globaldefs:
     case "call":
       if (expr.isFunc){
         // call a function
-        const args = expr.args.map((arg) => codeGenExpr(arg, classdefs, globaldefs)).join(" ");
-        return [args, "call", "$" + expr.name];
+        // const args = expr.args.map((arg) => codeGenExpr(arg, classdefs, globaldefs)).join(" ");
+        var args: any[] = [];
+        expr.args.forEach((arg) => {
+          args = [
+            ...args,
+            ...codeGenExpr(arg, classdefs, globaldefs)
+          ];
+        })
+        return [...args, "call", "$" + expr.name];
       } else {
         // initailize a object
         var initvals: any[] = [];
@@ -307,9 +330,7 @@ function codeGenExpr(expr : Expr<Type>, classdefs: ClassDef<Type>[], globaldefs:
       }
     case "classVar":
       const objStmts = codeGenExpr(expr.objName, classdefs, globaldefs);
-      console.log("exprrr")
-      console.log(expr);
-      const className: string = (expr.objName.a?.valueOf() as any).class;
+      var className: string = (expr.objName.a?.valueOf() as any).class;
       const classData = classdefs.filter((classdef) => classdef.name === className)[0];
       var index = 0;
       for(; index < classData.vardefs.length; index++){
@@ -330,7 +351,10 @@ function codeGenExpr(expr : Expr<Type>, classdefs: ClassDef<Type>[], globaldefs:
           ...codeGenExpr(arg, classdefs, globaldefs)
         ];
       })
-      return [...args, "call", "$" + expr.methodName];
+      // var className: string = (expr.objName.a?.valueOf() as any).class;
+      // const mName = expr.methodName.includes("$") ? expr.methodName : className + "$" + expr.methodName;
+      const mName = expr.methodName;
+      return [...args, "call", "$" + mName];
 
   }
 }

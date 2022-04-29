@@ -116,9 +116,6 @@ export function typeCheckStmts(stmts: Stmt<null>[], env: TypeEnv): Stmt<Type>[] 
                     throw new Error("TYPE ERROR");
                 }
                 const typedMemberValue = typeCheckExpr(stmt.value, env);
-                console.log('????')
-                console.log(typedMember)
-                console.log(typedMemberValue)
                 if ((typedMember.a as any).class !== (typedMemberValue.a as any).class && typedMember.a !== "none"){
                     throw new Error("TYPE ERROR");
                 }
@@ -235,6 +232,7 @@ export function typeCheckExpr(expr: Expr<null>, env: TypeEnv): Expr<Type>{
                     return { ... expr, arg, a: "int" as Type};
             }
         case "call":
+            console.log('incalll')
             if (env.funcs.has(expr.name)){
                 // throw new Error("REFERENCE ERROR: the function is not defined");
                 if (expr.args.length !== env.funcs.get(expr.name)[0].length){
@@ -246,9 +244,12 @@ export function typeCheckExpr(expr: Expr<null>, env: TypeEnv): Expr<Type>{
                         throw new Error("TYPE ERROR: the type of the param is wrong");
                     }
                 })
+                console.log('typeargs')
+                console.log(typedArgs)
                 return {...expr, args: typedArgs, a: env.funcs.get(expr.name)[1], isFunc: true}
             }
             else if (env.classes.has(expr.name)){
+                console.log('2way')
                 return {...expr, args: [], a: {tag: "object", class: expr.name}, isFunc: false}
             }
             else {
@@ -267,6 +268,7 @@ export function typeCheckExpr(expr: Expr<null>, env: TypeEnv): Expr<Type>{
             return {...expr, a: vars[0].typedvar.type, objName: typedObj}
         case "classMethod":
             // { a ?: A, tag: "classMethod", objName: Expr<A>, methodName: string, args: Expr<A>[]}
+            
             var typedObj = typeCheckExpr(expr.objName, env);
             if (!typedObj.a?.valueOf()?.hasOwnProperty("tag")){
                 throw new Error("TYPE ERROR: the variable is not an object");
@@ -276,7 +278,16 @@ export function typeCheckExpr(expr: Expr<null>, env: TypeEnv): Expr<Type>{
             if (methods.length === 0){
                 throw new Error("REFERENCE ERROR: no such a method in the class");
             }
-            return {...expr, objName: typedObj, methodName: methods[0].name, a: methods[0].ret}
+            const typedArgs = expr.args.map((arg) => typeCheckExpr(arg, env));
+            // typedArgs.forEach((typedArg, i) => {
+            //     console.log('!!!!!')
+            //     console.log(typedArg.a)
+            //     console.log(env.classes.get(className).methoddefs[i].a)
+            //     if (typedArg.a !== env.classes.get(className).methoddefs[i].a){
+            //         throw new Error("TYPE ERROR: the type of the param is wrong");
+            //     }
+            // })
+            return {...expr, objName: typedObj, methodName: methods[0].name, a: methods[0].ret, args: typedArgs}
         default: 
             return expr;
     }
