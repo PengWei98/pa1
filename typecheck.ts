@@ -56,7 +56,7 @@ export function typeCheckVarDefs(defs: VarDef<null>[], env: TypeEnv):VarDef<Type
         // check assginable
         // if (!assginable(, typedDef))
         if (typedDef.a !== def.typedvar.type && typedDef.a !== "none") {
-            throw new Error("TYPE ERROR");
+            throw new Error("TYPE ERROR:");
         }
         env.vars.set(def.typedvar.name, def.typedvar.type);
         const typedvar = {...def.typedvar, a: def.typedvar.type};
@@ -138,18 +138,18 @@ export function typeCheckStmts(stmts: Stmt<null>[], env: TypeEnv): Stmt<Type>[] 
             case "memberAssign":
                 const typedMember = typeCheckExpr(stmt.member, env);
                 if (typedMember.tag !== "classVar"){
-                    throw new Error("TYPE ERROR");
+                    throw new Error("TYPE ERROR:");
                 }
                 const typedMemberValue = typeCheckExpr(stmt.value, env);
-                if ((typedMember.a as any).class !== (typedMemberValue.a as any).class && typedMember.a !== "none"){
-                    throw new Error("TYPE ERROR");
+                if (!assginable(typedMember.a, typedMemberValue.a)){
+                    throw new Error("TYPE ERROR:");
                 }
                 typedStmts.push({...stmt, member: typedMember, value: typedMemberValue, a: "none" as Type})
                 break;
             case "return":
                 const typedRet = typeCheckExpr(stmt.ret, env);
                 if (env.retType !== typedRet.a && (env.retType as any).class !== (typedRet.a as any).class && typedRet.a !== "none"){
-                    throw new Error("TYPE ERROR");
+                    throw new Error("TYPE ERROR:");
                 }
                 typedStmts.push({...stmt, ret: typedRet});
                 break;
@@ -230,16 +230,19 @@ export function typeCheckExpr(expr: Expr<null>, env: TypeEnv): Expr<Type>{
                 case BinOp.GT:
                 case BinOp.LT:
                     if (left.a !== "int" as Type || right.a !== "int" as Type) {
-                        throw new Error("TYPE ERROR");
+                        throw new Error("TYPE ERROR:");
                     }
                     return { ... expr, left: left, right: right, a: "bool" as Type};
                 case BinOp.Eq:
                 case BinOp.NE:
                     if (left.a !== right.a) {
-                        throw new Error("TYPE ERROR");
+                        throw new Error("TYPE ERROR:");
                     }
                     return { ... expr, left: left, right: right, a: "bool" as Type};
                 case BinOp.Is:
+                    if (left.a === "int" || right.a === "int"){
+                        throw new Error("TYPE ERROR:");
+                    }
                     return { ... expr, left: left, right: right, a: "bool" as Type};
             }
         case "UniOp":
@@ -247,12 +250,12 @@ export function typeCheckExpr(expr: Expr<null>, env: TypeEnv): Expr<Type>{
             switch(expr.op){
                 case UniOp.Not:
                     if (arg.a !== "bool" as Type) {
-                        throw new Error("TYPE ERROR");
+                        throw new Error("TYPE ERROR:");
                     }
                     return { ... expr, arg, a: "bool" as Type};
                 case UniOp.UMinus:
                     if (arg.a !== "int" as Type) {
-                        throw new Error("TYPE ERROR");
+                        throw new Error("TYPE ERROR:");
                     }
                     return { ... expr, arg, a: "int" as Type};
             }

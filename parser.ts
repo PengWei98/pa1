@@ -246,8 +246,6 @@ export function traverseStmt(c : TreeCursor, s : string, program : Program<null>
           typedvar: {name, type: type as Type},
           literal
         }
-        console.log('vardef')
-        console.log(varDef)
         program.vardefs.push(varDef);
 
         // todo: is the object null is OK?

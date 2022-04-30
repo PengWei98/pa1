@@ -8,7 +8,11 @@ import {typeCheckProgram} from './../typecheck'
 export function typeCheck(source: string) : Type {
   const ast = typeCheckProgram(parse(source));
   const returnV = ast.stmts[ast.stmts.length - 1];
-  return returnV.a;
+  if (!returnV){
+    return "none";
+  } else{
+    return returnV.a;
+  }
 }
 
 

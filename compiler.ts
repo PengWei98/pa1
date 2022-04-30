@@ -58,22 +58,10 @@ export function compile(source: string) : CompileResult {
     signature = signature + funcVars.join("\n")
 
     const funcStmts = func.stmts.map((stmt) => {
-      console.log("stmt");
-      console.log(codeGen(stmt, ast.classdefs, ast.vardefs).join("\n"))
       // console.log( codeGen(stmt, ast.classdefs))
       return codeGen(stmt, ast.classdefs, ast.vardefs).join("\n")});
-
-      console.log('funcStmtsfuncStmtsfuncStmtsfuncStmtsfuncStmts')
-      console.log(funcStmts)
     var funcAllStmts;
-    // if (func.ret === "none"){
-      funcAllStmts = signature + "\n" + funcStmts.join("\n") + "(i32.const 0)\n)";
-    // }
-    // else{
-    //   funcAllStmts = signature + "\n" + funcStmts.join("\n") + ")";
-    // }
-    console.log("funcAllStmts")
-    console.log(funcAllStmts)
+    funcAllStmts = signature + "\n" + funcStmts.join("\n") + "(i32.const 0)\n)";
     funcDefines.push(funcAllStmts);
   });
 
@@ -105,12 +93,9 @@ export function compile(source: string) : CompileResult {
   })
 
   var wasmFuncs = funcDefines.join("\n\n");
-  console.log('wasm')
-  console.log(wasmFuncs)
   
   const commandGroups = ast.stmts.map((stmt) => codeGen(stmt, ast.classdefs, ast.vardefs));
-  console.log('comm')
-  console.log(commandGroups)
+
   const commands = localDefines.concat([].concat.apply([], commandGroups));
   return {
     wasmSource: commands.join("\n"),
@@ -155,8 +140,6 @@ function codeGen(stmt: Stmt<Type>, classdefs: ClassDef<Type>[], globaldefs: VarD
 
       var valStmts = codeGenExpr(stmt.ret, classdefs, globaldefs);
       valStmts.push("return");
-      console.log('ret')
-      console.log(valStmts)
       return valStmts;
     case "assign":
       var valStmts = codeGenExpr(stmt.value, classdefs, globaldefs);
@@ -166,7 +149,6 @@ function codeGen(stmt: Stmt<Type>, classdefs: ClassDef<Type>[], globaldefs: VarD
       var condExpr = codeGenExpr(stmt.cond, classdefs, globaldefs);
       var out = condExpr.concat([`(if`]).concat([`(then`]).concat(codeGenStmts(stmt.ifStmts, classdefs, globaldefs)).concat([`)`]);
       out = out.concat([`(else`]).concat(codeGenStmts(stmt.elseStmts, classdefs, globaldefs)).concat([`)`]).concat([`)`])
-      console.log(codeGenStmts(stmt.elseStmts, classdefs, globaldefs))
       return out;
 
     case "while":
@@ -261,7 +243,9 @@ function codeGenExpr(expr : Expr<Type>, classdefs: ClassDef<Type>[], globaldefs:
         case BinOp.Is:
           if (expr.left.a === "none" as Type && expr.right.a === "none" as Type){
             return ["(i32.const 1)"];
-          } else if (expr.left.a === expr.right.a){
+          } else if (expr.left.a === expr.right.a && ["int" as Type, "bool" as Type].includes(expr.left.a)){
+            return [...left, ...right, "(i32.eq)"]; 
+          } else if ((expr.left.a as any).tag === "object" && (expr.right.a as any).tag === "object" && (expr.left.a as any).class === (expr.right.a as any).class){
             return [...left, ...right, "(i32.eq)"]; 
           } else{
             return ["(i32.const 0)"];
