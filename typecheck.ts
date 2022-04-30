@@ -67,6 +67,12 @@ export function typeCheckVarDefs(defs: VarDef<null>[], env: TypeEnv):VarDef<Type
 
 export function typeCheckFuncDef(func: FuncDef<null>, env: TypeEnv): FuncDef<Type>{
     env.funcs.set(func.name, [func.params.map(params => params.type), func.ret]);
+    if (func.name.endsWith("$__init__") && func.params.length > 1){
+        throw new Error("TYPE ERROR: invalid init function");
+    }
+    if (func.name.endsWith("$__init__") && func.ret !== "none"){
+        throw new Error("TYPE ERROR: invalid init function");
+    }
     // add all the global enviroment to the local environment
     const localEnv = {vars: new Map(env.vars), funcs: new Map(env.funcs), retType: env.retType, classes: env.classes};
     // add all the parameters to the localEnvs
@@ -260,7 +266,6 @@ export function typeCheckExpr(expr: Expr<null>, env: TypeEnv): Expr<Type>{
                     return { ... expr, arg, a: "int" as Type};
             }
         case "call":
-            console.log('incalll')
             if (env.funcs.has(expr.name)){
                 // throw new Error("REFERENCE ERROR: the function is not defined");
                 if (expr.args.length !== env.funcs.get(expr.name)[0].length){
@@ -272,12 +277,9 @@ export function typeCheckExpr(expr: Expr<null>, env: TypeEnv): Expr<Type>{
                         throw new Error("TYPE ERROR: the type of the param is wrong");
                     }
                 })
-                console.log('typeargs')
-                console.log(typedArgs)
                 return {...expr, args: typedArgs, a: env.funcs.get(expr.name)[1], isFunc: true}
             }
             else if (env.classes.has(expr.name)){
-                console.log('2way')
                 return {...expr, args: [], a: {tag: "object", class: expr.name}, isFunc: false}
             }
             else {
@@ -295,8 +297,7 @@ export function typeCheckExpr(expr: Expr<null>, env: TypeEnv): Expr<Type>{
             }
             return {...expr, a: vars[0].typedvar.type, objName: typedObj}
         case "classMethod":
-            // { a ?: A, tag: "classMethod", objName: Expr<A>, methodName: string, args: Expr<A>[]}
-            
+            console.log("23425634534152634534")
             var typedObj = typeCheckExpr(expr.objName, env);
             if (!typedObj.a?.valueOf()?.hasOwnProperty("tag")){
                 throw new Error("TYPE ERROR: the variable is not an object");
@@ -307,6 +308,11 @@ export function typeCheckExpr(expr: Expr<null>, env: TypeEnv): Expr<Type>{
                 throw new Error("REFERENCE ERROR: no such a method in the class");
             }
             const typedArgs = expr.args.map((arg) => typeCheckExpr(arg, env));
+            typedArgs.forEach((typedArg, i) => {
+                if (!assginable(methods[0].params.slice(1)[i].type, typedArg.a)){
+                    throw new Error("TYPE ERROR: the type of the param is wrong");
+                }
+            })
             // typedArgs.forEach((typedArg, i) => {
             //     console.log('!!!!!')
             //     console.log(typedArg.a)

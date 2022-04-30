@@ -303,6 +303,16 @@ function codeGenExpr(expr : Expr<Type>, classdefs: ClassDef<Type>[], globaldefs:
             ...literalExpr,
             `i32.store`];
         });
+        const cons = classData.methoddefs.filter((methoddef) => methoddef.name.endsWith("$__init__"))
+        // if (cons.length > 0){
+        //   const constr = cons[0];
+        //   initvals = [
+        //     ...initvals,
+        //     // Expr
+        //     // ...codeGenExpr({tag: "call", name: className + "$__init__", args: [expr.], isFunc: true}, classdefs, globaldefs)
+        //   ]
+        //   // { a ?: A, tag: "classMethod", objName: Expr<A>, methodName: string, args: Expr<A>[]}
+        // }
         return [
           ...initvals,
           `(global.get $heap)`, // the return value (the start address)
