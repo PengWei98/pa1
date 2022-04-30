@@ -3,6 +3,7 @@ import wabt from 'wabt';
 import * as compiler from './../compiler';
 import {parse} from './../parser';
 import {typeCheckProgram} from './../typecheck'
+import { config } from "chai";
 
 // Modify typeCheck to return a `Type` as we have specified below
 export function typeCheck(source: string) : Type {
@@ -32,16 +33,6 @@ export async function run(source: string): Promise<number> {
     returnExpr = "(local.get $$last)"
   }
 
-  // importObject.imports = {
-  //   ...importObject.imports,
-  //   check_null_pointer: (arg: any) => {
-  //     if (arg === 0){
-  //       throw new Error("RUNTIME ERROR: null pointer");
-  //     }
-  //     return arg;
-  //   }
-  // }
-
   // (func $check_null_pointer (import "imports" "check_null_pointer") (param i32) (result i32))
 
   const compiled = compiler.compile(source);
@@ -54,6 +45,7 @@ export async function run(source: string): Promise<number> {
     (func $max (import "imports" "max") (param i32 i32) (result i32))
     (func $min (import "imports" "min") (param i32 i32) (result i32))
     (func $pow (import "imports" "pow") (param i32 i32) (result i32))
+    (func $check_null_pointer (import "imports" "check_null_pointer") (param i32) (result i32))
 
     ${compiled.wasmFuncs}
     ${compiled.wasmGlobals}
@@ -65,11 +57,23 @@ export async function run(source: string): Promise<number> {
       ${returnExpr}
     )
   )`;
+
+  const newImports = {
+    ...importObject.imports,
+    check_null_pointer: (arg: any) => {
+      if (arg === 0){
+        throw new Error("RUNTIME ERROR: null pointer");
+      }
+      return arg;
+    }
+  }
+  // console.log({ ...importObject, imports: newImports, js: {mem: memory}})
+
   console.log(wasmSource);
   const myModule = wabtInterface.parseWat("test.wat", wasmSource);
   var asBinary = myModule.toBinary({});
   var memory = new WebAssembly.Memory({initial:10, maximum:10000});
-  var wasmModule = await WebAssembly.instantiate(asBinary.buffer, { ...importObject, js: {mem: memory}} as any);
+  var wasmModule = await WebAssembly.instantiate(asBinary.buffer, { ...importObject, imports: newImports, js: {mem: memory}} as any);
   // var wasmModule = await WebAssembly.instantiate(asBinary.buffer, importObject as any);
   const result = (wasmModule.instance.exports.exported_func as any)();
   return result;
