@@ -141,10 +141,6 @@ function codeGen(stmt: Stmt<Type>, classdefs: ClassDef<Type>[], globaldefs: VarD
       var valStmts = codeGenExpr(stmt.ret, classdefs, globaldefs);
       valStmts.push("return");
       return valStmts;
-    case "assign":
-      var valStmts = codeGenExpr(stmt.value, classdefs, globaldefs);
-      valStmts.push(`(local.set $${stmt.name})`);
-      return valStmts;
     case "if":
       var condExpr = codeGenExpr(stmt.cond, classdefs, globaldefs);
       var out = condExpr.concat([`(if`]).concat([`(then`]).concat(codeGenStmts(stmt.ifStmts, classdefs, globaldefs)).concat([`)`]);
@@ -303,21 +299,36 @@ function codeGenExpr(expr : Expr<Type>, classdefs: ClassDef<Type>[], globaldefs:
             ...literalExpr,
             `i32.store`];
         });
-        const cons = classData.methoddefs.filter((methoddef) => methoddef.name.endsWith("$__init__"))
+        // const cons = classData.methoddefs.filter((methoddef) => methoddef.name.endsWith("$__init__"));
         // if (cons.length > 0){
-        //   const constr = cons[0];
         //   initvals = [
         //     ...initvals,
-        //     // Expr
-        //     // ...codeGenExpr({tag: "call", name: className + "$__init__", args: [expr.], isFunc: true}, classdefs, globaldefs)
+        //     `(global.get $heap)`,
+        //     `i32.load`,
+        //     `call`,
+        //     `$${className}$__init__`,
+        //     `(drop)`
         //   ]
-        //   // { a ?: A, tag: "classMethod", objName: Expr<A>, methodName: string, args: Expr<A>[]}
         // }
-        return [
+
+        initvals = [
           ...initvals,
           `(global.get $heap)`, // the return value (the start address)
           `(global.set $heap (i32.add (global.get $heap) (i32.const ${classData.vardefs.length * 4})))`
-        ]
+        ];
+
+        const cons = classData.methoddefs.filter((methoddef) => methoddef.name.endsWith("$__init__"));
+        if (cons.length > 0){
+          initvals = [
+            ...initvals,
+            `i32.load`,
+            `call`,
+            `$${className}$__init__`,
+            `(global.set $heap (i32.add (global.get $heap) (i32.const ${classData.vardefs.length * 4})))`
+          ]
+        }
+
+        return initvals;
 
       }
     case "classVar":
@@ -347,10 +358,6 @@ function codeGenExpr(expr : Expr<Type>, classdefs: ClassDef<Type>[], globaldefs:
         ];
       })
       args.splice(1, 0, `(call $check_null_pointer)`);
-
-
-      // var className: string = (expr.objName.a?.valueOf() as any).class;
-      // const mName = expr.methodName.includes("$") ? expr.methodName : className + "$" + expr.methodName;
       const mName = expr.methodName;
       return [...args, "call", "$" + mName];
 
